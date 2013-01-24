@@ -56,18 +56,11 @@ void setup() {
 void draw() {
   currTime = millis();
   if (currTime-startTime > pauseTime) {
-    rhinoCommand("join");
+    rhinoCommand("explode");
     robot.keyPress(KeyEvent.VK_ENTER);
     robot.keyRelease(KeyEvent.VK_ENTER);
     println("fired");
     startTime = currTime;
-  }
-}
-
-void keyPressed() {
-  if (key == 'g') {
-
-    println("asdfasdf!!");
   }
 }
 
