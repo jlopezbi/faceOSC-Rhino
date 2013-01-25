@@ -1,5 +1,7 @@
 import java.awt.AWTException;
 import java.awt.Robot;
+import oscP5.*;
+OscP5 oscP5;
 
 Robot robot;
 
@@ -9,12 +11,34 @@ String execute = "return";
 int lenStr = commandStr.length();
 int enterVal = 13;
 
-float pauseTime = 1000;
-float currTime;
-float startTime;
-int e  = 90;
+float commandTime = 100;
+float timeAbove;
+float timeBelow;
+boolean ranCommand = false;
 
+// num faces found
+int found;
+// pose
+PVector poseOrientation = new PVector();
+// gesture
+float eyeLeft;
+float thresholdEL;
+float eyebrowLeft;
+float thresholdEBL = 8.8;
+//-----------------------------------------------------
 void setup() {
+  oscP5 = new OscP5(this,8338);
+  oscP5.plug(this, "found", "/found");
+  oscP5.plug(this, "poseOrientation", "/pose/orientation");
+  oscP5.plug(this, "eyeLeftReceived", "/gesture/eye/left");
+  oscP5.plug(this, "eyebrowLeftReceived", "/gesture/eyebrow/left");
+  try { 
+    robot = new Robot();
+  } 
+  catch (AWTException e) {
+  }
+  poseOrientation = new PVector();
+
   keyStrokes.put('a', 65);
   keyStrokes.put('b', 66);
   keyStrokes.put('c', 67);
@@ -42,26 +66,39 @@ void setup() {
   keyStrokes.put('y', 89);
   keyStrokes.put('z', 90);
 
-  //size(400, 400);
-  try { 
-    robot = new Robot();
-  } 
-  catch (AWTException e) {
-    e.printStackTrace();
-  }
-
-  startTime = millis();
 }
 
+//--------------------------------------------------------
 void draw() {
-  currTime = millis();
-  if (currTime-startTime > pauseTime) {
+  //currTime = millis();
+  if(found>0){
+    if(eyebrowLeft >= thresholdEBL){
+      timeAbove = millis();
+    } else if (eyebrowLeft < thresholdEBL){
+      timeBelow = millis();
+    }
+    float timeDiff = timeBelow-timeAbove;
+    if(timeDiff > 0 && timeDiff <= commandTime){
+      if(!ranCommand){
+      println("eyebrowLeft went UP!!!!!!");
+      rhinoCommand("join");
+      ranCommand = true;
+      }
+      
+    }else if(timeDiff>commandTime){
+      ranCommand = false;
+    }
+    
+  }
+  
+  
+  /*if (currTime-startTime > pauseTime) {
     rhinoCommand("explode");
     robot.keyPress(KeyEvent.VK_ENTER);
     robot.keyRelease(KeyEvent.VK_ENTER);
     println("fired");
     startTime = currTime;
-  }
+  }*/
 }
 
 void rhinoCommand(String commandStr) {
@@ -74,8 +111,24 @@ void rhinoCommand(String commandStr) {
       value = j.intValue();
       robot.keyPress(value);
       robot.keyRelease(value);
-      println(currLetter + " = " + value);
+      //println(currLetter + " = " + value);
     }
   }
+  robot.keyPress(KeyEvent.VK_ENTER);
+  robot.keyRelease(KeyEvent.VK_ENTER);
+}
+//OSC CALLBACK FUNCTIONS
+
+public void found(int i) {
+  //println("found: " + i);
+  found = i;
+}
+public void eyebrowLeftReceived(float f) {
+  //println("eyebrow left: " + f);
+  eyebrowLeft = f;
+}
+public void eyeLeftReceived(float f) {
+  println("eye left: " + f);
+  eyeLeft = f;
 }
 
