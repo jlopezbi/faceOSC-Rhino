@@ -6,9 +6,7 @@ OscP5 oscP5;
 Robot robot;
 
 HashMap keyStrokes = new HashMap();
-String commandStr = "join";
-String execute = "return";
-int lenStr = commandStr.length();
+
 int rowCodeInt;
 int numCommands = 1; //start with join
 int numTriggers = 1; //start with eyebrowLeft;
@@ -91,7 +89,14 @@ void draw() {
   if (found>0) {
     triggers = checkTriggers(timeEvents, faceParamValue);
     rowCodeInt = compareTriggerToTemplate(triggers,template);
-    //println(triggers);
+    switch (rowCodeInt){
+      case 0:
+      rhinoCommand("join");
+      break;
+      case 1:
+      break;
+    }
+    
     println(rowCodeInt);
   }
 }
