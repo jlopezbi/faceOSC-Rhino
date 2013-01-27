@@ -1,13 +1,13 @@
-int recent = 150;
-int minAdapt = 2;
-int maxAdapt = 100;
+int recent = 100;
+
 
 class Graph extends ArrayList {
   float maxValue, minValue;
   boolean watching;
   String name;
 
-  float baseLine, relThreshold;
+  float recentMean, lastFloat, previousFloat;
+  float relThreshold;
   float maxTriggerTime, minTriggerTime;
   float exitTime, returnTime;
   boolean wasNegative;
@@ -52,6 +52,11 @@ class Graph extends ArrayList {
     }
     return getFloat(size() - 2);
   }
+  void setFloats() {
+    lastFloat = getLastFloat();
+    previousFloat = getPreviousFloat();
+  }
+
   float normalize(float x) {
     return constrain(norm(x, minValue, maxValue), 0, 1);
   }
@@ -80,6 +85,9 @@ class Graph extends ArrayList {
       mean += getFloat(size() - i - 1);
     return mean / n;
   }
+  void setRecentMean() {
+    recentMean = recentMean();
+  }
   float recentMedian() {
     float[] recentValues = new float[recent];
     int n = min(size(), recent);
@@ -96,30 +104,30 @@ class Graph extends ArrayList {
   int inBase(float value) {
     // 0 for in base, 1 for above threshold upper,
     // -1 for below thrshold lower, 5 for error
-    float threshold = recentMean()+relThreshold;
-    if (abs(value)<threshold) {
+    float thresholdUpper = recentMean+relThreshold; 
+    float thresholdLower = recentMean-relThreshold;
+    if (value<thresholdUpper && value>thresholdLower) {
       return 0;
     } 
-    else if (value>=threshold) {
+    else if (value>=thresholdUpper) {
       return 1;
     } 
-    else if (value<=-1.0 * threshold) {
+    else if (value<=thresholdLower) {
       return -1;
     } 
     else {
+      println("error not anywhere near base!");
       return 5;
     }
   }
 
-  boolean isOutside() {
-    float currValDist = abs(getLastFloat()-recentMean());
+  boolean isOutside(float lastFloat, float previousFloat) {
+    float currValDist = abs(lastFloat-previousFloat);
     return(currValDist > relThreshold);
   }
 
   void checkSign() {
-    float lastFloat = getLastFloat();
-    float baseLine = recentMean();
-    if (lastFloat<baseLine) {
+    if (lastFloat<recentMean) {
       wasNegative = true;
     }
     else {
@@ -128,8 +136,8 @@ class Graph extends ArrayList {
   }
 
   void markEnterExitTimes() {
-    int currPos = inBase(getLastFloat());
-    int prevPos = inBase(getPreviousFloat());
+    int currPos = inBase(lastFloat);
+    int prevPos = inBase(previousFloat);
     if (currPos == 0) {
       if (prevPos == 1) {
         returnTime = millis();
@@ -142,11 +150,12 @@ class Graph extends ArrayList {
     }
     else if (currPos == 1 && prevPos == 0) {
       exitTime = millis();
-    }else if (currPos == 1 && prevPos == -1){
+    }
+    else if (currPos == 1 && prevPos == -1) {
       //??
     }
-    
-    else if(currPos == -1 && prevPos == 1){
+
+    else if (currPos == -1 && prevPos == 1) {
       //??
     }
     else if (currPos == -1 && prevPos == 0) {
@@ -181,10 +190,6 @@ class Graph extends ArrayList {
 
 
   void draw(int width, int height) {
-    float baseLine = recentMean();
-    fill(getNorm(size() - 1) * 255);
-    //rect(0, 0, width, height);
-
     fill(0);
     stroke(0);
 
@@ -192,7 +197,7 @@ class Graph extends ArrayList {
 
     //RECENT MEAN IS ORANGE
     textAlign(LEFT, CENTER);
-    float rMeanPos = height - normalize(baseLine) * height;  
+    float rMeanPos = height - normalize(recentMean) * height;  
     text(nf(getLastFloat(), 0, 0) + " " + name, 10, rMeanPos);
     stroke(247, 165, 20);
     line(0, rMeanPos, width, rMeanPos);
@@ -200,11 +205,11 @@ class Graph extends ArrayList {
     //MEDIAN IS PINK
     /*
     float rMedian = recentMedian();
-    float rMedianPos = height-normalize(rMedian) * height;
-    text(nf(rMedian, 0, 0) + " " + name, 10, rMedianPos);
-    stroke(255, 0, 255);
-    line(0,rMedianPos,width,rMedianPos);
-*/
+     float rMedianPos = height-normalize(rMedian) * height;
+     text(nf(rMedian, 0, 0) + " " + name, 10, rMedianPos);
+     stroke(255, 0, 255);
+     line(0,rMedianPos,width,rMedianPos);
+     */
     //PINK negative, REd positive
     strokeWeight(4);
     if (wasNegative) {
@@ -223,8 +228,8 @@ class Graph extends ArrayList {
 
     ellipse(10, 10, 35, 35);
     strokeWeight(1);
-    
-    //DRAW MIN AND MAX TRIGGER TIMES,and refrence line
+
+    //DRAW MIN AND MAX TRIGGER TIMES,and refrence line X
     float pixPerMilli = .06;
     float xRef = 30;
     stroke(0);
@@ -239,10 +244,10 @@ class Graph extends ArrayList {
     if (relThreshold !=0.0) {
       //println("threshold for " + name+" = "+ threshold);
       stroke(10, 210, 247);
-      float threshAbove = baseLine+relThreshold;
+      float threshAbove = recentMean+relThreshold;
       float threshAbovePos = height-normalize(threshAbove)*height;
       line(0, threshAbovePos, width, threshAbovePos);
-      float threshBelow = baseLine-relThreshold;
+      float threshBelow = recentMean-relThreshold;
       float threshBelowPos = height-normalize(threshBelow)*height;
       line(0, threshBelowPos, width, threshBelowPos);
     }
@@ -252,10 +257,19 @@ class Graph extends ArrayList {
 
     //DRAW GRAPH
     noFill();
+    int relPos = inBase(lastFloat);
+    if (relPos == 0) {
+      stroke(20, 54, 242); //medium blue if in base
+    }
+    else if (relPos>0) {
+      stroke(137, 20, 242); //purple if above base
+    }
+    else {
+      stroke(20, 199, 242); //light blue if below base
+    }
     beginShape();
     //vertex(0, height);
     for (int i = 0; i < width && i < size(); i++) {
-      stroke(0);
       int position = size() - i - 1;
       vertex(i, height - getNorm(position) * height);
       strokeWeight(1);
@@ -264,16 +278,15 @@ class Graph extends ArrayList {
     //vertex(width, height);
     endShape();
 
+    stroke(0);
     fill(0);
     textAlign(LEFT, BOTTOM);
     text(nf(maxValue, 0, 0), width - 20, 20);
 
     noFill();
-    stroke(26, 170, 18);
-    if (true) {
-      float yPos = height-normalize(0)*height;
-      line(0, yPos, width, yPos);
-    }
+    stroke(26, 170, 18); //green line for zero
+    float yPos = 0;
+    line(0, yPos, width, yPos);
   }
   void save(String filename) {
     String[] out = new String[size()];

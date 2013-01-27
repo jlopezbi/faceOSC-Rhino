@@ -157,9 +157,11 @@ void draw() {
   background(255);  
   for (int i = 0; i < totalGraphs; i++) {
     Graph g = (Graph) graphs.get(i);
-    g.markEnterExitTimes();
-    g.checkSign();
     g.keepSize(150); //150 data points for graph
+    g.setFloats();
+    g.setRecentMean();
+    g.checkSign();
+    g.markEnterExitTimes();
     triggerVals[i] = g.outputTriggerVal();
 
     g.draw(width, height / totalGraphs*8/10);
@@ -170,46 +172,31 @@ void draw() {
   switch (rowCodeInt) {
   case 0:
     println("join");
-    //rhinoCommand("join");
+    rhinoCommand("join");
     break;
   case 1:
     println("explode");
-    //rhinoCommand("explode");
+    rhinoCommand("explode");
     break;
   case 2:
     println("group");
-    //rhinoCommand("explode");
+    rhinoCommand("explode");
     break;
   case 3:
     println("ungroup");
-    //rhinoCommand("explode");
+    rhinoCommand("explode");
     break;
   case 4:
     println("trim");
-    //rhinoCommand("explode");
+    rhinoCommand("explode");
     break;
   case 5:
     println("split");
-    //rhinoCommand("explode");
+    rhinoCommand("explode");
     break;
   }
 
   //println(rowCodeInt);
-
-  /*
-  if (found>0) {
-   triggers = checkTriggers(timeEvents, faceParamValue);
-   rowCodeInt = compareTriggerToTemplate(triggers, template);
-   switch (rowCodeInt) {
-   case 0:
-   rhinoCommand("join");
-   break;
-   case 1:
-   break;
-   }
-   
-   println(rowCodeInt);
-   }*/
 }
 
 
