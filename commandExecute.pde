@@ -16,18 +16,30 @@ int[] triggerVals = new int[totalGraphs];
 HashMap keyStrokes = new HashMap();
 
 int rowCodeInt;
-int numCommands = 1; //start with join
-int numTriggers = 1; //start with eyebrowLeft;
+int numCommands = 6; //start with join
+int numTriggers = 3; //start with eyebrowLeft;
 float commandTime = 100;
 float[][] timeEvents = new float[numTriggers][4]; 
 //[0] -> exitTime, [1] -> enterTime, [2]->threshold, [3] ->ranCommand(1.0 or -1.0)
 int[][] template = {
   {
-   0,0,1 //join
+    0, 0, 1 //join
   }
   , 
   {
-    0,0,-1 //explode
+    0, 0, -1 //explode
+  }
+  , {
+    0, 1, 0 //group
+  }
+  , {
+    0, -1, 0 //ungroup
+  }
+  , {
+    1, 0, 0 //trim
+  }
+  , {
+    -1, 0, 0 //split
   }
 };
 boolean[] triggers = new boolean[numTriggers];
@@ -48,11 +60,11 @@ PVector poseOrientation = new PVector();
 //-----------------------------------------------------
 void setup() {
   oscP5 = new OscP5(this, 8338);
-  
+
   // ---addons
   size(500, 800);
   frameRate(60);
-  
+
 
   oscP5 = new OscP5(this, 8338);
 
@@ -100,34 +112,34 @@ void setup() {
 
 void reset() {
   graphs = new Vector<Graph>();
-    //graphs.add(new Graph("poseScale"));
-    //graphs.add(new Graph("mouthWidth"));
-    //graphs.add(new Graph("mouthHeight"));
-    //graphs.add(new Graph("eyeLeft/Right"));
-    //graphs.add(new Graph("eyebrowLeft/Right"));
-    //graphs.add(new Graph("jaw"));
-    //graphs.add(new Graph("nostrils"));
-    //graphs.add(new Graph("posePosition.x"));
-    //graphs.add(new Graph("posePosition.y"));
-    graphs.add(new Graph("poseOrientation.x"));
-    graphs.add(new Graph("poseOrientation.y"));
-    graphs.add(new Graph("poseOrientation.z"));
-    
-    graphs.get(0).relThreshold = .07;
-    graphs.get(0).minTriggerTime = 100;
-    graphs.get(0).maxTriggerTime = 1000;
-    
-    graphs.get(1).relThreshold = .1;
-    graphs.get(1).minTriggerTime = 100;
-    graphs.get(1).maxTriggerTime = 1000;
-    
-    graphs.get(2).relThreshold = .1;
-    graphs.get(2).minTriggerTime = 100;
-    graphs.get(2).maxTriggerTime = 1000;
+  //graphs.add(new Graph("poseScale"));
+  //graphs.add(new Graph("mouthWidth"));
+  //graphs.add(new Graph("mouthHeight"));
+  //graphs.add(new Graph("eyeLeft/Right"));
+  //graphs.add(new Graph("eyebrowLeft/Right"));
+  //graphs.add(new Graph("jaw"));
+  //graphs.add(new Graph("nostrils"));
+  //graphs.add(new Graph("posePosition.x"));
+  //graphs.add(new Graph("posePosition.y"));
+  graphs.add(new Graph("poseOrientation.x"));
+  graphs.add(new Graph("poseOrientation.y"));
+  graphs.add(new Graph("poseOrientation.z"));
+
+  graphs.get(0).relThreshold = .07;
+  graphs.get(0).minTriggerTime = 100;
+  graphs.get(0).maxTriggerTime = 2000;
+
+  graphs.get(1).relThreshold = .07;
+  graphs.get(1).minTriggerTime = 100;
+  graphs.get(1).maxTriggerTime = 2000;
+
+  graphs.get(2).relThreshold = .07;
+  graphs.get(2).minTriggerTime = 100;
+  graphs.get(2).maxTriggerTime = 2000;
 }
 //--------------------------------------------------------
 void draw() {
-  if(face.found > 0) {
+  if (face.found > 0) {
     //graphs.get(0).add(face.poseScale);
     //graphs.get(0).add(face.mouthWidth);
     //graphs.get(1).add(face.mouthHeight);
@@ -141,35 +153,63 @@ void draw() {
     graphs.get(1).add(face.poseOrientation.y);
     graphs.get(2).add(face.poseOrientation.z);
   }
-  
+
   background(255);  
-  for(int i = 0; i < totalGraphs; i++) {
+  for (int i = 0; i < totalGraphs; i++) {
     Graph g = (Graph) graphs.get(i);
     g.markEnterExitTimes();
     g.checkSign();
-    g.keepSize(499);
+    g.keepSize(150); //150 data points for graph
     triggerVals[i] = g.outputTriggerVal();
+
     g.draw(width, height / totalGraphs*8/10);
     translate(0, height / totalGraphs);
   }
-  if(triggerVals[2]!=0){
-  println(triggerVals);
+
+  rowCodeInt = compareTriggerToTemplate(triggerVals, template);
+  switch (rowCodeInt) {
+  case 0:
+    println("join");
+    //rhinoCommand("join");
+    break;
+  case 1:
+    println("explode");
+    //rhinoCommand("explode");
+    break;
+  case 2:
+    println("group");
+    //rhinoCommand("explode");
+    break;
+  case 3:
+    println("ungroup");
+    //rhinoCommand("explode");
+    break;
+  case 4:
+    println("trim");
+    //rhinoCommand("explode");
+    break;
+  case 5:
+    println("split");
+    //rhinoCommand("explode");
+    break;
   }
-  
+
+  //println(rowCodeInt);
+
   /*
   if (found>0) {
-    triggers = checkTriggers(timeEvents, faceParamValue);
-    rowCodeInt = compareTriggerToTemplate(triggers, template);
-    switch (rowCodeInt) {
-    case 0:
-      rhinoCommand("join");
-      break;
-    case 1:
-      break;
-    }
-
-    println(rowCodeInt);
-  }*/
+   triggers = checkTriggers(timeEvents, faceParamValue);
+   rowCodeInt = compareTriggerToTemplate(triggers, template);
+   switch (rowCodeInt) {
+   case 0:
+   rhinoCommand("join");
+   break;
+   case 1:
+   break;
+   }
+   
+   println(rowCodeInt);
+   }*/
 }
 
 
@@ -183,7 +223,7 @@ void oscEvent(OscMessage m) {
 
 //--------------------------------------------------------
 
-int compareTriggerToTemplate(boolean[] triggers, boolean[][]template) {
+int compareTriggerToTemplate(int[] triggers, int[][]template) {
   // need to test
   // compares trigger array to template array, in which each row index
   // corresponds to a command.
@@ -197,7 +237,7 @@ int compareTriggerToTemplate(boolean[] triggers, boolean[][]template) {
   assert(triggers.length == template[0].length);
 
   while (lookingForMatch) {
-    if (i>numCommands) {
+    if (i>=numCommands) {
       break;
     }
 
@@ -212,7 +252,7 @@ int compareTriggerToTemplate(boolean[] triggers, boolean[][]template) {
       else {
         j+=1;
       }
-      if (j==numTriggers) {
+      if (j==triggers.length) {
         //found match!
         indexOfMatch = i;
         return indexOfMatch;
@@ -223,8 +263,6 @@ int compareTriggerToTemplate(boolean[] triggers, boolean[][]template) {
   return indexOfMatch;
 }
 
-void updateTimEvents() {
-}
 
 
 boolean[] checkTriggers(float[][] timeEvents, float[]faceParamValue) { 

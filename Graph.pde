@@ -1,7 +1,6 @@
-int recent = 300;
+int recent = 150;
 int minAdapt = 2;
 int maxAdapt = 100;
-int sizeLimit = 30;
 
 class Graph extends ArrayList {
   float maxValue, minValue;
@@ -226,7 +225,7 @@ class Graph extends ArrayList {
     strokeWeight(1);
     
     //DRAW MIN AND MAX TRIGGER TIMES,and refrence line
-    float pixPerMilli = .025;
+    float pixPerMilli = .06;
     float xRef = 30;
     stroke(0);
     line(xRef, 0, xRef, height);
