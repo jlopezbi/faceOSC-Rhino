@@ -5,6 +5,14 @@ OscP5 oscP5;
 
 Robot robot;
 
+//addons
+Face face = new Face();
+PFont font;
+Vector<Graph> graphs;
+int totalGraphs =3;
+int[] triggerVals = new int[totalGraphs];
+//addons
+
 HashMap keyStrokes = new HashMap();
 
 int rowCodeInt;
@@ -13,13 +21,13 @@ int numTriggers = 1; //start with eyebrowLeft;
 float commandTime = 100;
 float[][] timeEvents = new float[numTriggers][4]; 
 //[0] -> exitTime, [1] -> enterTime, [2]->threshold, [3] ->ranCommand(1.0 or -1.0)
-boolean[][] template = {
+int[][] template = {
   {
-   false
+   0,0,1 //join
   }
   , 
   {
-    true
+    0,0,-1 //explode
   }
 };
 boolean[] triggers = new boolean[numTriggers];
@@ -40,10 +48,16 @@ PVector poseOrientation = new PVector();
 //-----------------------------------------------------
 void setup() {
   oscP5 = new OscP5(this, 8338);
-  /*oscP5.plug(this, "found", "/found");
-   oscP5.plug(this, "poseOrientation", "/pose/orientation");
-   oscP5.plug(this, "eyeLeftReceived", "/gesture/eye/left");
-   oscP5.plug(this, "eyebrowLeftReceived", "/gesture/eyebrow/left");*/
+  
+  // ---addons
+  size(500, 800);
+  frameRate(60);
+  
+
+  oscP5 = new OscP5(this, 8338);
+
+  reset();
+  // ---addons
 
   try { 
     robot = new Robot();
@@ -83,9 +97,66 @@ void setup() {
   keyStrokes.put('y', 89);
   keyStrokes.put('z', 90);
 }
+
+void reset() {
+  graphs = new Vector<Graph>();
+    //graphs.add(new Graph("poseScale"));
+    //graphs.add(new Graph("mouthWidth"));
+    //graphs.add(new Graph("mouthHeight"));
+    //graphs.add(new Graph("eyeLeft/Right"));
+    //graphs.add(new Graph("eyebrowLeft/Right"));
+    //graphs.add(new Graph("jaw"));
+    //graphs.add(new Graph("nostrils"));
+    //graphs.add(new Graph("posePosition.x"));
+    //graphs.add(new Graph("posePosition.y"));
+    graphs.add(new Graph("poseOrientation.x"));
+    graphs.add(new Graph("poseOrientation.y"));
+    graphs.add(new Graph("poseOrientation.z"));
+    
+    graphs.get(0).relThreshold = .07;
+    graphs.get(0).minTriggerTime = 100;
+    graphs.get(0).maxTriggerTime = 1000;
+    
+    graphs.get(1).relThreshold = .1;
+    graphs.get(1).minTriggerTime = 100;
+    graphs.get(1).maxTriggerTime = 1000;
+    
+    graphs.get(2).relThreshold = .1;
+    graphs.get(2).minTriggerTime = 100;
+    graphs.get(2).maxTriggerTime = 1000;
+}
 //--------------------------------------------------------
 void draw() {
-  //currTime = millis();
+  if(face.found > 0) {
+    //graphs.get(0).add(face.poseScale);
+    //graphs.get(0).add(face.mouthWidth);
+    //graphs.get(1).add(face.mouthHeight);
+    //graphs.get(0).add(face.eyeLeft + face.eyeRight);
+    //graphs.get(1).add(face.eyebrowLeft + face.eyebrowRight);
+    //graphs.get(2).add(face.jaw);
+    //graphs.get(6).add(face.nostrils);
+    //graphs.get(7).add(face.posePosition.x);
+    //graphs.get(8).add(face.posePosition.y);
+    graphs.get(0).add(face.poseOrientation.x);
+    graphs.get(1).add(face.poseOrientation.y);
+    graphs.get(2).add(face.poseOrientation.z);
+  }
+  
+  background(255);  
+  for(int i = 0; i < totalGraphs; i++) {
+    Graph g = (Graph) graphs.get(i);
+    g.markEnterExitTimes();
+    g.checkSign();
+    g.keepSize(499);
+    triggerVals[i] = g.outputTriggerVal();
+    g.draw(width, height / totalGraphs*8/10);
+    translate(0, height / totalGraphs);
+  }
+  if(triggerVals[2]!=0){
+  println(triggerVals);
+  }
+  
+  /*
   if (found>0) {
     triggers = checkTriggers(timeEvents, faceParamValue);
     rowCodeInt = compareTriggerToTemplate(triggers, template);
@@ -98,10 +169,15 @@ void draw() {
     }
 
     println(rowCodeInt);
-  }
+  }*/
 }
 
 
+// OSC CALLBACK FUNCTIONS
+
+void oscEvent(OscMessage m) {
+  face.parseOSC(m);
+}
 
 
 
