@@ -12,14 +12,14 @@ int numCommands = 1; //start with join
 int numTriggers = 1; //start with eyebrowLeft;
 float commandTime = 100;
 float[][] timeEvents = new float[numTriggers][4]; 
-//[0] -> upTime, [1] -> downTime, [2]->threshold, [3] ->ranCommand(1.0 or -1.0)
- boolean[][] template = {
+//[0] -> exitTime, [1] -> enterTime, [2]->threshold, [3] ->ranCommand(1.0 or -1.0)
+boolean[][] template = {
   {
-    true
+   false
   }
   , 
   {
-    false
+    true
   }
 };
 boolean[] triggers = new boolean[numTriggers];
@@ -35,15 +35,16 @@ PVector poseOrientation = new PVector();
  float thresholdEL;
  float eyebrowLeft;
  float thresholdEBL = 8.8;*/
- 
- 
+
+
 //-----------------------------------------------------
 void setup() {
   oscP5 = new OscP5(this, 8338);
-  oscP5.plug(this, "found", "/found");
-  oscP5.plug(this, "poseOrientation", "/pose/orientation");
-  oscP5.plug(this, "eyeLeftReceived", "/gesture/eye/left");
-  oscP5.plug(this, "eyebrowLeftReceived", "/gesture/eyebrow/left");
+  /*oscP5.plug(this, "found", "/found");
+   oscP5.plug(this, "poseOrientation", "/pose/orientation");
+   oscP5.plug(this, "eyeLeftReceived", "/gesture/eye/left");
+   oscP5.plug(this, "eyebrowLeftReceived", "/gesture/eyebrow/left");*/
+
   try { 
     robot = new Robot();
   } 
@@ -53,7 +54,7 @@ void setup() {
   //INTIALIZE VALUES IN ARRAYS
   timeEvents[0][2] = 8.8;
   timeEvents[0][3] = -1.0;
- 
+
 
   keyStrokes.put('a', 65);
   keyStrokes.put('b', 66);
@@ -82,21 +83,20 @@ void setup() {
   keyStrokes.put('y', 89);
   keyStrokes.put('z', 90);
 }
-
 //--------------------------------------------------------
 void draw() {
   //currTime = millis();
   if (found>0) {
     triggers = checkTriggers(timeEvents, faceParamValue);
-    rowCodeInt = compareTriggerToTemplate(triggers,template);
-    switch (rowCodeInt){
-      case 0:
+    rowCodeInt = compareTriggerToTemplate(triggers, template);
+    switch (rowCodeInt) {
+    case 0:
       rhinoCommand("join");
       break;
-      case 1:
+    case 1:
       break;
     }
-    
+
     println(rowCodeInt);
   }
 }
@@ -117,14 +117,14 @@ int compareTriggerToTemplate(boolean[] triggers, boolean[][]template) {
   int indexOfMatch = -1;
   int i = 0;
   boolean lookingForMatch = true;
-  
+
   assert(triggers.length == template[0].length);
-  
+
   while (lookingForMatch) {
     if (i>numCommands) {
-     break;
+      break;
     }
-    
+
     int j=0;
     boolean isMatching = true;
     while (isMatching) {
@@ -147,10 +147,13 @@ int compareTriggerToTemplate(boolean[] triggers, boolean[][]template) {
   return indexOfMatch;
 }
 
+void updateTimEvents() {
+}
+
 
 boolean[] checkTriggers(float[][] timeEvents, float[]faceParamValue) { 
   //input: array called timeEvents 
-  //for row: [0]->upTime,[1]->downTime,[2]->threshold,[3]-> (-1 or 1)
+  //for row: [0]->exitTime,[1]->enterTime,[2]->threshold,[3]-> (-1 or 1)
   //output: array called triggers[] which contains booleans for
   //for each trigger
   boolean[] triggers = new boolean[numTriggers];
@@ -158,14 +161,14 @@ boolean[] checkTriggers(float[][] timeEvents, float[]faceParamValue) {
   for (int i =0; i< numCommands; i++) {
     float threshold = timeEvents[i][2];
     if (faceParamValue[i] >= threshold) {
-      //upTime
+      //exitTime
       timeEvents[i][0] = millis();
     }
     else {
-      //downTime
+      //enterTime
       timeEvents[i][1] = millis();
     }
-    boolean run = wasTrigger(timeEvents[i][0], timeEvents[i][1], timeEvents[i][3],i);
+    boolean run = wasTrigger(timeEvents[i][0], timeEvents[i][1], timeEvents[i][3], i);
     if (run) {
       triggers[i] = true;
     }
@@ -176,12 +179,12 @@ boolean[] checkTriggers(float[][] timeEvents, float[]faceParamValue) {
   return triggers;
 }
 
-boolean wasTrigger(float upTime, float downTime, float ranC, int i ) {
+boolean wasTrigger(float exitTime, float enterTime, float ranC, int i ) {
   //checks two times, one for the time when the signal went above a threshold, 
   //one for the time when the signal went below the threshold, and outputs boolean
   //based on if it can be considerred a trigger. by default returns false
 
-  float tDiff = downTime-upTime;
+  float tDiff = enterTime-exitTime;
   if (tDiff>0 && tDiff < commandTime) {
     if (ranC < 0 ) {
       timeEvents[i][3] = 1.0;
