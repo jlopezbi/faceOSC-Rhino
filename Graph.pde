@@ -227,7 +227,7 @@ class Graph extends ArrayList {
     }
 
     ellipse(10, 10, 35, 35);
-    strokeWeight(1);
+    strokeWeight(3);
 
     //DRAW MIN AND MAX TRIGGER TIMES,and refrence line X
     float pixPerMilli = .06;
@@ -268,14 +268,12 @@ class Graph extends ArrayList {
       stroke(20, 199, 242); //light blue if below base
     }
     beginShape();
-    //vertex(0, height);
     for (int i = 0; i < width && i < size(); i++) {
       int position = size() - i - 1;
       vertex(i, height - getNorm(position) * height);
       strokeWeight(1);
       ellipse(i, height - getNorm(position) * height, 5, 5);
     }
-    //vertex(width, height);
     endShape();
 
     stroke(0);
@@ -288,6 +286,8 @@ class Graph extends ArrayList {
     float yPos = 0;
     line(0, yPos, width, yPos);
   }
+  
+  
   void save(String filename) {
     String[] out = new String[size()];
     for (int i = 0; i < size(); i++) 

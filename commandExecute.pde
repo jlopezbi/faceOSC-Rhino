@@ -1,17 +1,20 @@
+//CHECK out adaptive thresholding
+
 import java.awt.AWTException;
 import java.awt.Robot;
 import oscP5.*;
 OscP5 oscP5;
 
-Robot robot;
 
-//addons
+Robot robot;
 Face face = new Face();
 PFont font;
-Vector<Graph> graphs;
+Vector<Graph> graphs; //should be called Signal or chanel
 int totalGraphs =3;
+float minTimeBetweenCommand = 700; 
+float timePrevCommand = 0;
 int[] triggerVals = new int[totalGraphs];
-//addons
+
 
 HashMap keyStrokes = new HashMap();
 
@@ -62,7 +65,7 @@ void setup() {
   oscP5 = new OscP5(this, 8338);
 
   // ---addons
-  size(500, 800);
+  size(500, 1010);
   frameRate(60);
 
 
@@ -125,17 +128,17 @@ void reset() {
   graphs.add(new Graph("poseOrientation.y"));
   graphs.add(new Graph("poseOrientation.z"));
 
-  graphs.get(0).relThreshold = .07;
+  graphs.get(0).relThreshold = .05;
   graphs.get(0).minTriggerTime = 100;
-  graphs.get(0).maxTriggerTime = 2000;
+  graphs.get(0).maxTriggerTime = 400;
 
   graphs.get(1).relThreshold = .07;
   graphs.get(1).minTriggerTime = 100;
-  graphs.get(1).maxTriggerTime = 2000;
+  graphs.get(1).maxTriggerTime = 400;
 
   graphs.get(2).relThreshold = .07;
   graphs.get(2).minTriggerTime = 100;
-  graphs.get(2).maxTriggerTime = 2000;
+  graphs.get(2).maxTriggerTime = 900;
 }
 //--------------------------------------------------------
 void draw() {
@@ -157,7 +160,7 @@ void draw() {
   background(255);  
   for (int i = 0; i < totalGraphs; i++) {
     Graph g = (Graph) graphs.get(i);
-    g.keepSize(150); //150 data points for graph
+    g.keepSize(200); //150 data points for graph
     g.setFloats();
     g.setRecentMean();
     g.checkSign();
@@ -169,34 +172,43 @@ void draw() {
   }
 
   rowCodeInt = compareTriggerToTemplate(triggerVals, template);
-  switch (rowCodeInt) {
-  case 0:
-    println("join");
-    rhinoCommand("join");
-    break;
-  case 1:
-    println("explode");
-    rhinoCommand("explode");
-    break;
-  case 2:
-    println("group");
-    rhinoCommand("explode");
-    break;
-  case 3:
-    println("ungroup");
-    rhinoCommand("explode");
-    break;
-  case 4:
-    println("trim");
-    rhinoCommand("explode");
-    break;
-  case 5:
-    println("split");
-    rhinoCommand("explode");
-    break;
+  if (rowCodeInt != -1) {
+    if (millis()-timePrevCommand > minTimeBetweenCommand) {
+      timePrevCommand = millis();
+      switch (rowCodeInt) {
+      case 0:
+        //Z axis
+        println("join\n");
+        rhinoCommand("join");
+        break;
+      case 1:
+        // Z axis
+        println("explode\n");
+        rhinoCommand("explode");
+        break;
+      case 2:
+        //Y axis
+        println("group\n");
+        rhinoCommand("group");
+        break;
+      case 3:
+        // Y axis
+        println("ungroup\n");
+        rhinoCommand("ungroup");
+        break;
+      case 4:
+        //X axis
+        println("trim\n");
+        rhinoCommand("trim");
+        break;
+      case 5:
+        // x axis
+        println("split\n");
+        rhinoCommand("split");
+        break;
+      }
+    }
   }
-
-  //println(rowCodeInt);
 }
 
 
@@ -251,56 +263,56 @@ int compareTriggerToTemplate(int[] triggers, int[][]template) {
 }
 
 
-
+/*
 boolean[] checkTriggers(float[][] timeEvents, float[]faceParamValue) { 
-  //input: array called timeEvents 
-  //for row: [0]->exitTime,[1]->enterTime,[2]->threshold,[3]-> (-1 or 1)
-  //output: array called triggers[] which contains booleans for
-  //for each trigger
-  boolean[] triggers = new boolean[numTriggers];
-
-  for (int i =0; i< numCommands; i++) {
-    float threshold = timeEvents[i][2];
-    if (faceParamValue[i] >= threshold) {
-      //exitTime
-      timeEvents[i][0] = millis();
-    }
-    else {
-      //enterTime
-      timeEvents[i][1] = millis();
-    }
-    boolean run = wasTrigger(timeEvents[i][0], timeEvents[i][1], timeEvents[i][3], i);
-    if (run) {
-      triggers[i] = true;
-    }
-    else {
-      triggers[i] = false;
-    }
-  }
-  return triggers;
-}
-
-boolean wasTrigger(float exitTime, float enterTime, float ranC, int i ) {
-  //checks two times, one for the time when the signal went above a threshold, 
-  //one for the time when the signal went below the threshold, and outputs boolean
-  //based on if it can be considerred a trigger. by default returns false
-
-  float tDiff = enterTime-exitTime;
-  if (tDiff>0 && tDiff < commandTime) {
-    if (ranC < 0 ) {
-      timeEvents[i][3] = 1.0;
-      return true;
-    }
-    else {
-      return false;
-    }
-  }
-  else if (tDiff > commandTime) {
-    timeEvents[i][3] = -1.0;
-    return false;
-  }
-  return false;
-}
+ //input: array called timeEvents 
+ //for row: [0]->exitTime,[1]->enterTime,[2]->threshold,[3]-> (-1 or 1)
+ //output: array called triggers[] which contains booleans for
+ //for each trigger
+ boolean[] triggers = new boolean[numTriggers];
+ 
+ for (int i =0; i< numCommands; i++) {
+ float threshold = timeEvents[i][2];
+ if (faceParamValue[i] >= threshold) {
+ //exitTime
+ timeEvents[i][0] = millis();
+ }
+ else {
+ //enterTime
+ timeEvents[i][1] = millis();
+ }
+ boolean run = wasTrigger(timeEvents[i][0], timeEvents[i][1], timeEvents[i][3], i);
+ if (run) {
+ triggers[i] = true;
+ }
+ else {
+ triggers[i] = false;
+ }
+ }
+ return triggers;
+ }
+ 
+ boolean wasTrigger(float exitTime, float enterTime, float ranC, int i ) {
+ //checks two times, one for the time when the signal went above a threshold, 
+ //one for the time when the signal went below the threshold, and outputs boolean
+ //based on if it can be considerred a trigger. by default returns false
+ 
+ float tDiff = enterTime-exitTime;
+ if (tDiff>0 && tDiff < commandTime) {
+ if (ranC < 0 ) {
+ timeEvents[i][3] = 1.0;
+ return true;
+ }
+ else {
+ return false;
+ }
+ }
+ else if (tDiff > commandTime) {
+ timeEvents[i][3] = -1.0;
+ return false;
+ }
+ return false;
+ }*/
 
 void rhinoCommand(String commandStr) {
   //works fine
@@ -319,18 +331,11 @@ void rhinoCommand(String commandStr) {
   robot.keyPress(KeyEvent.VK_ENTER);
   robot.keyRelease(KeyEvent.VK_ENTER);
 }
+
 //OSC CALLBACK FUNCTIONS
 
 public void found(int i) {
   //println("found: " + i);
   found = i;
-}
-public void eyebrowLeftReceived(float f) {
-  //println("eyebrow left: " + f);
-  faceParamValue[0] = f;
-}
-public void eyeLeftReceived(float f) {
-  //println("eye left: " + f);
-  //eyeLeft = f;
 }
 
